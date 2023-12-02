@@ -1,0 +1,136 @@
+LIBRARY ieee;
+USE ieee.numeric_std.all; 
+USE ieee.std_logic_1164.all;
+--use IEEE.STD_LOGIC_ARITH.ALL;
+--use IEEE.STD_LOGIC_UNSIGNED.ALL;
+
+
+entity ReactionTimerGame is
+	port( SW: in STD_logic_VECtor(17 downto 0);
+	KEY: in STD_LOGIC_VECTOR(3 downto 0);
+	HEX0, HEX1, HEX6, HEX7: out STD_LOGIC_VECTOR(6 downto 0); --HEX0, HEX1, HEX2, HEX3, HEX4, HEX5, HEX6, HEX7
+	ClOCK_50: in std_logic;
+	LEDR: out std_logic_vector(17 downto 0));
+	
+	
+end ReactionTimerGame;
+
+
+
+architecture behaviour of ReactionTimerGame is
+
+
+component DispHEx 
+	port (D1 :in unsigned(5 downto 0);
+			Y0, Y1: out STD_LOGIC_VECTOR( 6 downto 0));
+
+end component; 
+
+
+component RandomNumberGenerator
+ Port ( clk : in STD_LOGIC;
+           btn_change : in STD_LOGIC;
+           rand_out : out unsigned(5 downto 0));
+    
+	 
+end component;
+
+
+component PreScale is 
+	port (CLKin: in std_logic;
+			CLKout: out std_logic); 
+end component; 
+
+component SegDecoder is 
+
+	Port ( D : in std_logic_vector( 3 downto 0 );
+			Y : out std_logic_vector( 6 downto 0 ));
+			
+end component; 
+
+component BCDCount2 is 
+
+port (clear, enable, clk: in std_logic ;
+		BCD0: out std_logic_vector(3 downto 0); 
+		BCD1: out std_logic_vector(3 downto 0)); 
+		
+end component; 
+
+
+
+
+signal temp: unsigned (5 downto 0);--target value
+signal and_sig, mux_sig, enable_sig, clk_sig, q_out, w, reset : std_logic;
+signal bcd_sig0, bcd_sig1 : std_logic_vector (3 downto 0);
+signal hex_sig0, hex_sig1 : std_logic_vector(6 downto 0);
+
+
+begin 
+ 
+obj1:  DispHEx 
+
+port map (D1=>temp, Y0=> HEX0, Y1=> HEX1);
+
+
+obj2:  RandomNumberGenerator
+
+Port map ( clk=> clk_sig, btn_change => KEY(1), rand_out => temp ); 
+
+obj3: PreScale
+port map (CLKin => CLOCK_50, CLKout => clk_sig);
+
+
+
+--ADDED
+
+
+
+
+
+
+
+
+--Flip-flop behaviour
+
+
+process (clk_sig)
+	BEGIN
+		if (rising_edge(Clk_sig)) THEN
+			q_out <= and_sig;
+		else
+			q_out <= q_out;
+		end if;	
+		
+end process;
+
+LEDR(17) <= not q_out;
+
+--Mux behaviour
+mux_sig <= '1' when (w = '1')
+	else q_out;
+	
+-- and gate behaviour
+and_sig <= mux_sig and not KEY(2);
+
+
+obj4: BCDCount2
+port map (clear=>reset, enable => q_out, BCD0 => BCD_sig0, BCD1 => BCD_Sig1, clk => clk_sig);
+
+
+--REDUNDANT PRESCALE FROM TESTREACTION
+--obj5: PreScale
+--port map (CLKin => CLOCK_50, CLKout => clk_sig);
+
+obj6: SegDecoder
+port map (D => BCD_sig0, Y => HEX6);
+
+obj7: SegDecoder
+port map (D=> BCD_sig1, Y => HEX7);
+
+w <= SW(0);
+reset <= SW(1);
+
+--END ADDED
+
+
+end behaviour;
